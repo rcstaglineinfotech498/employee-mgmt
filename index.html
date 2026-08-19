@@ -1,0 +1,253 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Employee Management</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <div class="container">
+          <h1>Employee Management System</h1>
+        </div>
+      </header>
+
+      <main class="container">
+        <section class="panel form-panel">
+          <h2>Employee Registration Form</h2>
+
+          <form id="employeeForm" novalidate>
+            <div class="form-grid">
+              <div class="field-group">
+                <label for="firstName">First Name <span class="required">*</span></label>
+                <input id="firstName" name="firstName" type="text" required />
+                <span class="error" data-for="firstName"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="lastName">Last Name <span class="required">*</span></label>
+                <input id="lastName" name="lastName" type="text" required />
+                <span class="error" data-for="lastName"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="email">Email <span class="required">*</span></label>
+                <input id="email" name="email" type="email" required />
+                <span class="error" data-for="email"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="phone">Phone <span class="required">*</span></label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  pattern="^\+?\d{7,15}$"
+                  required
+                />
+                <span class="error" data-for="phone"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="dob">Date of Birth <span class="required">*</span></label>
+                <input id="dob" name="dob" type="date" required />
+                <span class="error" data-for="dob"></span>
+              </div>
+
+              <div class="field-group">
+                <label>Gender <span class="required">*</span></label>
+                <div class="inline-options">
+                  <label><input type="radio" name="gender" value="Male" /> Male</label>
+                  <label><input type="radio" name="gender" value="Female" /> Female</label>
+                  <label><input type="radio" name="gender" value="Other" /> Other</label>
+                </div>
+                <span class="error" data-for="gender"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="address">Address <span class="required">*</span></label>
+                <textarea id="address" name="address" required></textarea>
+                <span class="error" data-for="address"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="country">Country <span class="required">*</span></label>
+                <select id="country" name="country" required>
+                  <option value="">Select Country</option>
+                </select>
+                <span class="error" data-for="country"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="state">State <span class="required">*</span></label>
+                <select id="state" name="state" required>
+                  <option value="">Select State</option>
+                </select>
+                <span class="error" data-for="state"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="city">City <span class="required">*</span></label>
+                <select id="city" name="city" required>
+                  <option value="">Select City</option>
+                </select>
+                <span class="error" data-for="city"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="postalCode">Postal Code <span class="required">*</span></label>
+                <input
+                  id="postalCode"
+                  name="postalCode"
+                  type="text"
+                  pattern="^[A-Za-z0-9 -]{3,10}$"
+                  required
+                />
+                <span class="error" data-for="postalCode"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="employeeId">Employee ID <span class="required">*</span></label>
+                <input
+                  id="employeeId"
+                  name="employeeId"
+                  type="text"
+                  pattern="^[A-Za-z0-9-]{3,20}$"
+                  required
+                />
+                <span class="error" data-for="employeeId"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="department">Department <span class="required">*</span></label>
+                <select id="department" name="department" required>
+                  <option value="">Select Department</option>
+                  <option>Engineering</option>
+                  <option>Marketing</option>
+                  <option>Sales</option>
+                  <option>HR</option>
+                  <option>Operations</option>
+                  <option>Finance</option>
+                </select>
+                <span class="error" data-for="department"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="jobTitle">Job Title <span class="required">*</span></label>
+                <input id="jobTitle" name="jobTitle" type="text" required />
+                <span class="error" data-for="jobTitle"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="startDate">Start Date <span class="required">*</span></label>
+                <input id="startDate" name="startDate" type="date" required />
+                <span class="error" data-for="startDate"></span>
+              </div>
+
+              <div class="field-group">
+                <label>Employment Type <span class="required">*</span></label>
+                <div class="inline-options">
+                  <label><input type="radio" name="empType" value="Full-time" /> Full-time</label>
+                  <label><input type="radio" name="empType" value="Part-time" /> Part-time</label>
+                  <label><input type="radio" name="empType" value="Contract" /> Contract</label>
+                </div>
+                <span class="error" data-for="empType"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="salary">Salary (Annual / $)</label>
+                <input id="salary" name="salary" type="number" min="0" step="0.01" />
+                <span class="error" data-for="salary"></span>
+              </div>
+
+              <div class="field-group full-width">
+                <label>Skills (optional)</label>
+                <div class="checkbox-grid">
+                  <label><input type="checkbox" name="skills" value="JavaScript" /> JavaScript</label>
+                  <label><input type="checkbox" name="skills" value="Python" /> Python</label>
+                  <label><input type="checkbox" name="skills" value="SQL" /> SQL</label>
+                  <label><input type="checkbox" name="skills" value="Project Management" /> Project Management</label>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="resume">Resume (PDF only)</label>
+                <input id="resume" name="resume" type="file" accept="application/pdf" />
+                <span class="error" data-for="resume"></span>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Register Employee</button>
+              <button type="reset" class="btn btn-secondary">Reset</button>
+            </div>
+
+            <div id="formMessage" aria-live="polite"></div>
+          </form>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-header">
+            <h2>Employee Records</h2>
+          </div>
+
+          <div class="toolbar">
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="Search employees..."
+              aria-label="Search employees"
+            />
+
+            <select id="departmentFilter">
+              <option value="">All Departments</option>
+            </select>
+
+            <select id="countryFilter">
+              <option value="">All Countries</option>
+            </select>
+
+            <button id="clearFiltersBtn" type="button" class="btn btn-secondary">
+              Clear Filters
+            </button>
+          </div>
+
+          <div class="bulk-actions">
+            <button id="selectAllBtn" type="button" class="btn btn-secondary">Select All</button>
+            <button id="deleteSelectedBtn" type="button" class="btn btn-danger">Delete Selected</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="masterCheckbox" aria-label="Select all employees" /></th>
+                  <th data-sort="fullName">Name</th>
+                  <th data-sort="email">Email</th>
+                  <th data-sort="department">Department</th>
+                  <th data-sort="empType">Employment Type</th>
+                  <th data-sort="country">Country</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="employeeTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel details-panel">
+          <h2>Employee Details</h2>
+          <div id="employeeDetails" class="empty-state">Select an employee to view details.</div>
+        </section>
+
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
+
