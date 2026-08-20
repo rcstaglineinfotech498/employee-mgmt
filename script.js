@@ -401,6 +401,7 @@ function renderTable() {
           <td>
             <div class="action-group">
               <button type="button" class="btn btn-secondary" data-action="view" data-id="${safeText(id)}">View</button>
+              <button type="button" class="btn btn-primary" data-action="edit" data-id="${safeText(id)}">Edit</button>
               <button type="button" class="btn btn-danger" data-action="delete" data-id="${safeText(id)}">Delete</button>
             </div>
           </td>
@@ -485,6 +486,55 @@ function exportEmployeeAsText(employee) {
   ].join("\n");
 }
 
+function editEmployeeById(employeeId) {
+  const employee = employees.find((e) => String(e.id) === String(employeeId));
+  if (!employee) return;
+
+  editingId = String(employee.id);
+
+  form.firstName.value = employee.firstName || "";
+  form.lastName.value = employee.lastName || "";
+  form.email.value = employee.email || "";
+  form.phone.value = employee.phone || "";
+  form.dob.value = employee.dob || "";
+  form.address.value = employee.address || "";
+  form.postalCode.value = employee.postalCode || "";
+  form.employeeId.value = employee.employeeId || "";
+  form.department.value = employee.department || "";
+  form.jobTitle.value = employee.jobTitle || "";
+  form.startDate.value = employee.startDate || "";
+  form.salary.value = employee.salary || "";
+
+  // radios
+  const genderInput = form.querySelector(`input[name="gender"][value="${employee.gender}"]`);
+  if (genderInput) genderInput.checked = true;
+  const empTypeInput = form.querySelector(`input[name="empType"][value="${employee.empType}"]`);
+  if (empTypeInput) empTypeInput.checked = true;
+
+  // skills
+  form.querySelectorAll('input[name="skills"]').forEach((el) => {
+    el.checked = (employee.skills || []).includes(el.value);
+  });
+
+  // location (country/state/city)
+  countrySelect.value = employee.country || "";
+  populateLocationFields();
+  stateSelect.value = employee.state || "";
+  handleStateChange();
+  citySelect.value = employee.city || "";
+
+  // cannot set file input value; keep name in message
+  formMessage.textContent = `Editing ${getFullName(employee)} (existing resume: ${employee.resume || "none"})`;
+  formMessage.className = "info-summary";
+
+  // change submit button text to indicate editing
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.textContent = "Save Changes";
+
+  form.firstName.focus();
+}
+
+
 function deleteEmployeeById(employeeId) {
   employees = employees.filter(
     (employee) => String(employee.id) !== String(employeeId),
@@ -500,6 +550,57 @@ function submitEmployeeData() {
   const checkedSkills = Array.from(
     form.querySelectorAll('input[name="skills"]:checked'),
   ).map((input) => input.value);
+
+    if (editingId) {
+    const idx = employees.findIndex((e) => String(e.id) === String(editingId));
+    if (idx === -1) return;
+
+    const existing = employees[idx];
+    const newResume =
+      form.resume.files && form.resume.files[0]
+        ? form.resume.files[0].name
+        : existing.resume || "";
+
+    const updated = {
+      ...existing,
+      firstName: form.firstName.value.trim(),
+      lastName: form.lastName.value.trim(),
+      email: form.email.value.trim(),
+      phone: form.phone.value.trim(),
+      dob: form.dob.value,
+      gender: form.querySelector('input[name="gender"]:checked')?.value || "",
+      address: form.address.value.trim(),
+      country: form.country.value,
+      state: form.state.value,
+      city: form.city.value,
+      postalCode: form.postalCode.value.trim(),
+      employeeId: form.employeeId.value.trim(),
+      department: form.department.value,
+      jobTitle: form.jobTitle.value.trim(),
+      startDate: form.startDate.value,
+      empType: form.querySelector('input[name="empType"]:checked')?.value || "",
+      salary: form.salary.value,
+      skills: checkedSkills,
+      resume: newResume,
+    };
+
+    employees.splice(idx, 1, updated);
+    saveEmployees();
+    buildFilterOptions();
+    renderTable();
+    renderDetails(updated);
+
+    formMessage.textContent = "Employee updated successfully.";
+    formMessage.className = "success-summary";
+
+    // clear editing state
+    editingId = null;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = "Register Employee";
+    form.reset();
+    populateLocationFields();
+    return;
+  }
 
   const employee = {
     id: `emp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -672,6 +773,11 @@ employeeTableBody.addEventListener("click", (event) => {
 
     if (actionButton.dataset.action === "view") {
       renderDetails(employee);
+      return;
+    }
+
+    if (actionButton.dataset.action === "edit") {
+      editEmployeeById(employeeId);
       return;
     }
 
