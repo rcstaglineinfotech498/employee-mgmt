@@ -313,3 +313,7 @@ tbody td:first-child {
     width: 100%;
   }
 }
+.btn-edit{
+  color: white;
+  background-color: #1d4ed8;
+}

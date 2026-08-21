@@ -1,4 +1,6 @@
+
 const STORAGE_KEY = "employeeManagementRecords";
+
 const form = document.getElementById("employeeForm");
 const formMessage = document.getElementById("formMessage");
 const employeeTableBody = document.getElementById("employeeTableBody");
@@ -10,9 +12,17 @@ const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 const masterCheckbox = document.getElementById("masterCheckbox");
 const selectAllBtn = document.getElementById("selectAllBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+
 const countrySelect = document.getElementById("country");
 const stateSelect = document.getElementById("state");
 const citySelect = document.getElementById("city");
+
+const resumeInput = document.getElementById("resume");
+
+let employees = loadEmployees();
+let selectedIds = new Set();
+let sortState = { key: "firstName", direction: "asc" };
+let editingId = null;
 
 const locationData = {
   India: {
@@ -36,26 +46,22 @@ const locationData = {
   },
 };
 
-let employees = loadEmployees();
-let selectedIds = new Set();
-let sortState = { key: "fullName", direction: "asc" };
+function safeText(value) {
+  return String(value ?? "");
+}
 
-function  safeText(value) {
-  return String(value ?? "")
+function getFullName(employee) {
+  return `${employee.firstName || ""} ${employee.lastName || ""}`.trim();
 }
 
 function showError(field, message) {
-  const span = document.querySelector(
-    `.error[data-for="${field.id || field.name}"]`,
-  );
+  const span = document.querySelector(`.error[data-for="${field.id || field.name}"]`);
   if (span) span.textContent = message;
   field.classList.add("invalid");
 }
 
 function clearError(field) {
-  const span = document.querySelector(
-    `.error[data-for="${field.id || field.name}"]`,
-  );
+  const span = document.querySelector(`.error[data-for="${field.id || field.name}"]`);
   if (span) span.textContent = "";
   field.classList.remove("invalid");
 }
@@ -65,11 +71,12 @@ function ageFromDOB(dobStr) {
   const dob = new Date(dobStr);
   const diff = Date.now() - dob.getTime();
   const ageDate = new Date(diff);
-  return console.log(Math.abs(ageDate.getUTCFullYear() - 1970)) ;
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
 }
 
 function validateField(field) {
   clearError(field);
+
   if (field.disabled) return true;
 
   if (field.required && !field.value) {
@@ -77,24 +84,35 @@ function validateField(field) {
     return false;
   }
 
-  if (field.type === "email" && field.value) {
-    if (!field.checkValidity()) {
-      showError(field, "Enter a valid email.");
-      return false;
-    }
+  if (field.type === "email" && field.value && !field.checkValidity()) {
+    showError(field, "Enter a valid email.");
+    return false;
   }
 
-  if (field.type === "tel" && field.value) {
-    if (!field.checkValidity()) {
-      showError(field, "Enter a valid phone (digits, optional +).");
-      return false;
-    }
+  if (field.type === "tel" && field.value && !field.checkValidity()) {
+    showError(field, "Enter a valid phone number.");
+    return false;
   }
 
   if (field.type === "date" && field.id === "dob" && field.value) {
-    const age = ageFromDOB(field.value);
-    if (age < 18) {
+    if (ageFromDOB(field.value) < 18) {
       showError(field, "Employee must be at least 18 years old.");
+      return false;
+    }
+  }
+
+
+  if (field.type === "number" && field.value && Number(field.value) < 0) {
+    showError(field, "Value must be non-negative.");
+    return false;
+  }
+   if (field.type === "date" && field.id === "startDate" && field.value) {
+    const selectedDate = new Date(`${field.value}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate > today) {
+      showError(field, "Start date cannot be in the future.");
       return false;
     }
   }
@@ -105,23 +123,8 @@ function validateField(field) {
       showError(field, "File too large (max 2MB).");
       return false;
     }
-    if (field.accept && !file.type.includes("pdf")) {
-      showError(field, "Only PDF allowed.");
-      return false;
-    }
-  }
-
-  if (field.type === "number" && field.value) {
-    if (Number(field.value) < 0) {
-      showError(field, "Value must be non-negative.");
-      return false;
-    }
-  }
-
-  if (field.pattern && field.value) {
-    const regex = new RegExp(field.pattern);
-    if (!regex.test(field.value)) {
-      showError(field, "Invalid format.");
+    if (file.type && !file.type.includes("pdf")) {
+      showError(field, "Only PDF files are allowed.");
       return false;
     }
   }
@@ -139,8 +142,6 @@ function validateRadios(groupName) {
     if (span) span.textContent = "Please select an option.";
     return false;
   }
-  console.log(anyChecked)
-  console.log(span)
 
   if (span) span.textContent = "";
   return true;
@@ -151,10 +152,10 @@ function loadEmployees() {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     if (Array.isArray(stored) && stored.length) return stored;
   } catch (error) {
-    console.warn("Error reading local storage", error);
+    console.warn("Error reading employees:", error);
   }
 
-  const sample = [
+  const defaultEmployees = [
     {
       id: "id_1",
       firstName: "ruchit",
@@ -162,11 +163,11 @@ function loadEmployees() {
       email: "sample@example.com",
       phone: "+919876543210",
       dob: "1993-05-14",
-      gender: "male",
+      gender: "Male",
       address: "utran , surat",
       country: "India",
-      state: "gujrat",
-      city: "surat",
+      state: "Gujarat",
+      city: "Surat",
       postalCode: "39415",
       employeeId: "EMP-1001",
       department: "Engineering",
@@ -201,33 +202,29 @@ function loadEmployees() {
     },
   ];
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sample));
-  return sample;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultEmployees));
+  return defaultEmployees;
 }
 
 function saveEmployees() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
 }
-//for country
+
 function populateCountryOptions() {
   const countries = Object.keys(locationData);
   const currentValue = countrySelect.value;
-  
+
   countrySelect.innerHTML =
-  '<option value="">Select Country</option>' +
-  countries
-  .map(
-    (country) =>
-      `<option value="${safeText(country)}">${safeText(country)}</option>`,
-  )
-  .join("");
-  
+    '<option value="">Select Country</option>' +
+    countries
+      .map((country) => `<option value="${safeText(country)}">${safeText(country)}</option>`)
+      .join("");
+
   if (currentValue && countries.includes(currentValue)) {
     countrySelect.value = currentValue;
   }
 }
 
-//for state
 function populateLocationFields() {
   const country = countrySelect.value;
   stateSelect.innerHTML = '<option value="">Select State</option>';
@@ -251,7 +248,6 @@ function handleCountryChange() {
   clearError(citySelect);
 }
 
-//for city
 function handleStateChange() {
   const country = countrySelect.value;
   const state = stateSelect.value;
@@ -271,10 +267,6 @@ function handleStateChange() {
 
 countrySelect.addEventListener("change", handleCountryChange);
 stateSelect.addEventListener("change", handleStateChange);
-
-function getFullName(employee) {
-  return `${employee.firstName || ""} ${employee.lastName || ""}`.trim();
-}
 
 function getEmployeeSearchText(employee) {
   return [
@@ -297,16 +289,38 @@ function getSortedEmployees(list) {
   const sorted = [...list];
 
   sorted.sort((a, b) => {
-    const valA = (a[key] ?? "").toString().toLowerCase();
-    const valB = (b[key] ?? "").toString().toLowerCase();
+    const valA = (key === "fullName" ? getFullName(a) : (a[key] ?? "")).toString().toLowerCase();
+    const valB = (key === "fullName" ? getFullName(b) : (b[key] ?? "")).toString().toLowerCase();
 
     if (valA < valB) return direction === "asc" ? -1 : 1;
     if (valA > valB) return direction === "asc" ? 1 : -1;
-
     return 0;
   });
 
   return sorted;
+}
+
+function buildFilterOptions() {
+  const departments = [...new Set(employees.map((employee) => employee.department).filter(Boolean))].sort();
+  const countries = [...new Set(employees.map((employee) => employee.country).filter(Boolean))].sort();
+
+  const currentDepartment = departmentFilter.value;
+  const currentCountry = countryFilter.value;
+
+  departmentFilter.innerHTML =
+    '<option value="">All Departments</option>' +
+    departments
+      .map((dept) => `<option value="${safeText(dept)}">${safeText(dept)}</option>`)
+      .join("");
+
+  countryFilter.innerHTML =
+    '<option value="">All Countries</option>' +
+    countries
+      .map((country) => `<option value="${safeText(country)}">${safeText(country)}</option>`)
+      .join("");
+
+  departmentFilter.value = departments.includes(currentDepartment) ? currentDepartment : "";
+  countryFilter.value = countries.includes(currentCountry) ? currentCountry : "";
 }
 
 function getFilteredEmployees() {
@@ -317,53 +331,17 @@ function getFilteredEmployees() {
   const filtered = employees.filter((employee) => {
     const matchesSearch =
       !searchValue || getEmployeeSearchText(employee).includes(searchValue);
+
     const matchesDepartment =
       !departmentValue || employee.department === departmentValue;
-    const matchesCountry = !countryValue || employee.country === countryValue;
+
+    const matchesCountry =
+      !countryValue || employee.country === countryValue;
 
     return matchesSearch && matchesDepartment && matchesCountry;
   });
+
   return getSortedEmployees(filtered);
-}
-
-function buildFilterOptions() {
-  const departments = [
-    ...new Set(
-      employees.map((employee) => employee.department).filter(Boolean),
-    ),
-  ].sort();
-  console.log(departments)
-  const countries = [
-    ...new Set(employees.map((employee) => employee.country).filter(Boolean)),
-  ].sort();
-
-  const currentDepartment = departmentFilter.value;
-  const currentCountry = countryFilter.value;
-
-  departmentFilter.innerHTML =
-    '<option value="">All Departments</option>' +
-    departments
-      .map(
-        (dept) =>
-          `<option value="${safeText(dept)}">${safeText(dept)}</option>`,
-      )
-      .join("");
-
-  countryFilter.innerHTML =
-    '<option value="">All Countries</option>' +
-    countries
-      .map(
-        (country) =>
-          `<option value="${safeText(country)}">${safeText(country)}</option>`,
-      )
-      .join("");
-
-  departmentFilter.value = departments.includes(currentDepartment)
-    ? currentDepartment
-    : "";
-  countryFilter.value = countries.includes(currentCountry)
-    ? currentCountry
-    : "";
 }
 
 function renderTable() {
@@ -400,8 +378,8 @@ function renderTable() {
           <td>${safeText(employee.country)}</td>
           <td>
             <div class="action-group">
-              <button type="button" class="btn btn-secondary" data-action="view" data-id="${safeText(id)}">View</button>
-              <button type="button" class="btn btn-primary" data-action="edit" data-id="${safeText(id)}">Edit</button>
+              <button type="button" class="btn" data-action="view" data-id="${safeText(id)}">View</button>
+              <button type="button" class="btn btn-edit" data-action="edit" data-id="${safeText(id)}">Edit</button>
               <button type="button" class="btn btn-danger" data-action="delete" data-id="${safeText(id)}">Delete</button>
             </div>
           </td>
@@ -411,7 +389,7 @@ function renderTable() {
     .join("");
 
   const allVisibleSelected = visibleEmployees.every((employee) =>
-    selectedIds.has(String(employee.id)),
+    selectedIds.has(String(employee.id))
   );
   masterCheckbox.checked = allVisibleSelected && visibleEmployees.length > 0;
 }
@@ -439,7 +417,7 @@ function renderDetails(employee) {
     ["Postal Code", employee.postalCode],
     ["Address", employee.address],
     ["Resume", employee.resume || "Not uploaded"],
-    ["Skills", (employee.skills || []).join(",") || "None"],
+    ["Skills", (employee.skills || []).join(", ") || "None"],
   ];
 
   employeeDetails.innerHTML = `
@@ -451,39 +429,11 @@ function renderDetails(employee) {
               <strong>${safeText(label)}</strong>
               <span>${safeText(value)}</span>
             </div>
-          `,
+          `
         )
         .join("")}
     </div>
   `;
-}
-
-
-function fallbackCopy(value) {
-  const textArea = document.createElement("textarea");
-  textArea.value = value;
-  document.body.appendChild(textArea);
-  textArea.select();
-  document.execCommand("copy");
-  textArea.remove();
-}
-
-function exportEmployeeAsText(employee) {
-  return [
-    `Name: ${getFullName(employee)}`,
-    `Email: ${employee.email}`,
-    `Phone: ${employee.phone}`,
-    `Department: ${employee.department}`,
-    `Job Title: ${employee.jobTitle}`,
-    `Employee ID: ${employee.employeeId}`,
-    `Gender: ${employee.gender}`,
-    `Country: ${employee.country}`,
-    `State: ${employee.state}`,
-    `City: ${employee.city}`,
-    `Address: ${employee.address}`,
-    `Employment Type: ${employee.empType}`,
-    `Skills: ${(employee.skills || []).join(", ") || "None"}`,
-  ].join("\n");
 }
 
 function editEmployeeById(employeeId) {
@@ -492,53 +442,46 @@ function editEmployeeById(employeeId) {
 
   editingId = String(employee.id);
 
-  form.firstName.value = employee.firstName || "";
-  form.lastName.value = employee.lastName || "";
-  form.email.value = employee.email || "";
-  form.phone.value = employee.phone || "";
-  form.dob.value = employee.dob || "";
-  form.address.value = employee.address || "";
-  form.postalCode.value = employee.postalCode || "";
-  form.employeeId.value = employee.employeeId || "";
-  form.department.value = employee.department || "";
-  form.jobTitle.value = employee.jobTitle || "";
-  form.startDate.value = employee.startDate || "";
-  form.salary.value = employee.salary || "";
+  document.getElementById("firstName").value = employee.firstName || "";
+  document.getElementById("lastName").value = employee.lastName || "";
+  document.getElementById("email").value = employee.email || "";
+  document.getElementById("phone").value = employee.phone || "";
+  document.getElementById("dob").value = employee.dob || "";
+  document.getElementById("address").value = employee.address || "";
+  document.getElementById("postalCode").value = employee.postalCode || "";
+  document.getElementById("employeeId").value = employee.employeeId || "";
+  document.getElementById("department").value = employee.department || "";
+  document.getElementById("jobTitle").value = employee.jobTitle || "";
+  document.getElementById("startDate").value = employee.startDate || "";
+  document.getElementById("salary").value = employee.salary || "";
 
-  // radios
-  const genderInput = form.querySelector(`input[name="gender"][value="${employee.gender}"]`);
-  if (genderInput) genderInput.checked = true;
-  const empTypeInput = form.querySelector(`input[name="empType"][value="${employee.empType}"]`);
-  if (empTypeInput) empTypeInput.checked = true;
+  const genderRadio = form.querySelector(`input[name="gender"][value="${employee.gender}"]`);
+  if (genderRadio) genderRadio.checked = true;
 
-  // skills
-  form.querySelectorAll('input[name="skills"]').forEach((el) => {
-    el.checked = (employee.skills || []).includes(el.value);
+  const empTypeRadio = form.querySelector(`input[name="empType"][value="${employee.empType}"]`);
+  if (empTypeRadio) empTypeRadio.checked = true;
+
+  form.querySelectorAll('input[name="skills"]').forEach((box) => {
+    box.checked = (employee.skills || []).includes(box.value);
   });
 
-  // location (country/state/city)
   countrySelect.value = employee.country || "";
   populateLocationFields();
   stateSelect.value = employee.state || "";
   handleStateChange();
   citySelect.value = employee.city || "";
 
-  // cannot set file input value; keep name in message
   formMessage.textContent = `Editing ${getFullName(employee)} (existing resume: ${employee.resume || "none"})`;
   formMessage.className = "info-summary";
 
-  // change submit button text to indicate editing
   const submitBtn = form.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.textContent = "Save Changes";
 
-  form.firstName.focus();
+  document.getElementById("firstName").focus();
 }
 
-
 function deleteEmployeeById(employeeId) {
-  employees = employees.filter(
-    (employee) => String(employee.id) !== String(employeeId),
-  );
+  employees = employees.filter((employee) => String(employee.id) !== String(employeeId));
   selectedIds.delete(String(employeeId));
   saveEmployees();
   buildFilterOptions();
@@ -548,106 +491,87 @@ function deleteEmployeeById(employeeId) {
 
 function submitEmployeeData() {
   const checkedSkills = Array.from(
-    form.querySelectorAll('input[name="skills"]:checked'),
+    form.querySelectorAll('input[name="skills"]:checked')
   ).map((input) => input.value);
 
-    if (editingId) {
-    const idx = employees.findIndex((e) => String(e.id) === String(editingId));
-    if (idx === -1) return;
+  const employeeData = {
+    firstName: document.getElementById("firstName").value.trim(),
+    lastName: document.getElementById("lastName").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    dob: document.getElementById("dob").value,
+    gender: form.querySelector('input[name="gender"]:checked')?.value || "",
+    address: document.getElementById("address").value.trim(),
+    country: countrySelect.value,
+    state: stateSelect.value,
+    city: citySelect.value,
+    postalCode: document.getElementById("postalCode").value.trim(),
+    employeeId: document.getElementById("employeeId").value.trim(),
+    department: document.getElementById("department").value,
+    jobTitle: document.getElementById("jobTitle").value.trim(),
+    startDate: document.getElementById("startDate").value,
+    empType: form.querySelector('input[name="empType"]:checked')?.value || "",
+    salary: document.getElementById("salary").value,
+    skills: checkedSkills,
+    resume: resumeInput.files && resumeInput.files[0] ? resumeInput.files[0].name : "",
+  };
 
-    const existing = employees[idx];
-    const newResume =
-      form.resume.files && form.resume.files[0]
-        ? form.resume.files[0].name
-        : existing.resume || "";
+  if (editingId) {
+    const index = employees.findIndex((employee) => String(employee.id) === String(editingId));
+    if (index === -1) return;
 
-    const updated = {
+    const existing = employees[index];
+    employees[index] = {
       ...existing,
-      firstName: form.firstName.value.trim(),
-      lastName: form.lastName.value.trim(),
-      email: form.email.value.trim(),
-      phone: form.phone.value.trim(),
-      dob: form.dob.value,
-      gender: form.querySelector('input[name="gender"]:checked')?.value || "",
-      address: form.address.value.trim(),
-      country: form.country.value,
-      state: form.state.value,
-      city: form.city.value,
-      postalCode: form.postalCode.value.trim(),
-      employeeId: form.employeeId.value.trim(),
-      department: form.department.value,
-      jobTitle: form.jobTitle.value.trim(),
-      startDate: form.startDate.value,
-      empType: form.querySelector('input[name="empType"]:checked')?.value || "",
-      salary: form.salary.value,
-      skills: checkedSkills,
-      resume: newResume,
+      ...employeeData,
+      id: existing.id,
     };
 
-    employees.splice(idx, 1, updated);
     saveEmployees();
     buildFilterOptions();
     renderTable();
-    renderDetails(updated);
+    renderDetails(employees[index]);
 
     formMessage.textContent = "Employee updated successfully.";
     formMessage.className = "success-summary";
 
-    // clear editing state
     editingId = null;
     const submitBtn = form.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.textContent = "Register Employee";
+
     form.reset();
     populateLocationFields();
     return;
   }
 
-  const employee = {
+  const newEmployee = {
     id: `emp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    firstName: form.firstName.value.trim(),
-    lastName: form.lastName.value.trim(),
-    email: form.email.value.trim(),
-    phone: form.phone.value.trim(),
-    dob: form.dob.value,
-    gender: form.querySelector('input[name="gender"]:checked')?.value || "",
-    address: form.address.value.trim(),
-    country: form.country.value,
-    state: form.state.value,
-    city: form.city.value,
-    postalCode: form.postalCode.value.trim(),
-    employeeId: form.employeeId.value.trim(),
-    department: form.department.value,
-    jobTitle: form.jobTitle.value.trim(),
-    startDate: form.startDate.value,
-    empType: form.querySelector('input[name="empType"]:checked')?.value || "",
-    salary: form.salary.value,
-    skills: checkedSkills,
-    resume:
-      form.resume.files && form.resume.files[0]
-        ? form.resume.files[0].name
-        : "",
+    ...employeeData,
   };
 
-  employees.unshift(employee);
+  employees.unshift(newEmployee);
   saveEmployees();
   buildFilterOptions();
   renderTable();
-  renderDetails(employee);
+  renderDetails(newEmployee);
+
   form.reset();
   populateLocationFields();
+
   formMessage.textContent = "Employee registered successfully.";
   formMessage.className = "success-summary";
 }
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
+
   formMessage.textContent = "";
   let valid = true;
 
-  const controls = form.querySelectorAll("input, select, textarea");
-  controls.forEach((control) => {
-    if (control.type === "radio") return;
-    if (!validateField(control)) valid = false;
+  const fields = form.querySelectorAll("input, select, textarea");
+  fields.forEach((field) => {
+    if (field.type === "radio") return;
+    if (!validateField(field)) valid = false;
   });
 
   if (!validateRadios("gender")) valid = false;
@@ -656,10 +580,6 @@ form.addEventListener("submit", (event) => {
   if (!valid) {
     formMessage.textContent = "Please fix errors above and resubmit.";
     formMessage.className = "error-summary";
-    const firstInvalid = form.querySelector(
-      ".invalid, .error:empty ~ input.invalid",
-    );
-    if (firstInvalid) firstInvalid.focus();
     return;
   }
 
@@ -680,9 +600,7 @@ form.addEventListener("reset", () => {
     document.querySelectorAll(".error").forEach((span) => {
       span.textContent = "";
     });
-    document
-      .querySelectorAll(".invalid")
-      .forEach((field) => field.classList.remove("invalid"));
+    document.querySelectorAll(".invalid").forEach((field) => field.classList.remove("invalid"));
     formMessage.textContent = "";
     formMessage.className = "";
     populateLocationFields();
@@ -702,54 +620,42 @@ clearFiltersBtn.addEventListener("click", () => {
 
 masterCheckbox.addEventListener("change", () => {
   const visibleEmployees = getFilteredEmployees();
+
   if (masterCheckbox.checked) {
-    visibleEmployees.forEach((employee) =>
-      selectedIds.add(String(employee.id)),
-    );
+    visibleEmployees.forEach((employee) => selectedIds.add(String(employee.id)));
   } else {
-    visibleEmployees.forEach((employee) =>
-      selectedIds.delete(String(employee.id)),
-    );
+    visibleEmployees.forEach((employee) => selectedIds.delete(String(employee.id)));
   }
+
   renderTable();
 });
 
 selectAllBtn.addEventListener("click", () => {
   const visibleEmployees = getFilteredEmployees();
+
   if (!visibleEmployees.length) return;
 
-  const allSelected = visibleEmployees.every((employee) =>
-    selectedIds.has(String(employee.id)),
-  );
+  const allSelected = visibleEmployees.every((employee) => selectedIds.has(String(employee.id)));
 
   if (allSelected) {
-    visibleEmployees.forEach((employee) =>
-      selectedIds.delete(String(employee.id)),
-    );
+    visibleEmployees.forEach((employee) => selectedIds.delete(String(employee.id)));
   } else {
-    visibleEmployees.forEach((employee) =>
-      selectedIds.add(String(employee.id)),
-    );
+    visibleEmployees.forEach((employee) => selectedIds.add(String(employee.id)));
   }
 
   renderTable();
 });
 
-
 deleteSelectedBtn.addEventListener("click", () => {
   if (!selectedIds.size) {
-    alert("Please select at least one employee to delete.");
+    alert("Please select at least one employee.");
     return;
   }
 
-  const confirmed = window.confirm(
-    `Delete ${selectedIds.size} selected employee(s)?`,
-  );
+  const confirmed = window.confirm(`Delete ${selectedIds.size} selected employee(s)?`);
   if (!confirmed) return;
 
-  employees = employees.filter(
-    (employee) => !selectedIds.has(String(employee.id)),
-  );
+  employees = employees.filter((employee) => !selectedIds.has(String(employee.id)));
   selectedIds.clear();
   saveEmployees();
   buildFilterOptions();
@@ -765,10 +671,7 @@ employeeTableBody.addEventListener("click", (event) => {
   if (!employeeId) return;
 
   if (actionButton) {
-    const employee = employees.find(
-      (item) => String(item.id) === String(employeeId),
-    );
-
+    const employee = employees.find((item) => String(item.id) === String(employeeId));
     if (!employee) return;
 
     if (actionButton.dataset.action === "view") {
@@ -788,14 +691,8 @@ employeeTableBody.addEventListener("click", (event) => {
     }
   }
 
-  if (
-    row &&
-    !event.target.closest("button") &&
-    !event.target.closest("input")
-  ) {
-    const employee = employees.find(
-      (item) => String(item.id) === String(employeeId),
-    );
+  if (row && !event.target.closest("button") && !event.target.closest("input")) {
+    const employee = employees.find((item) => String(item.id) === String(employeeId));
     renderDetails(employee);
   }
 });
